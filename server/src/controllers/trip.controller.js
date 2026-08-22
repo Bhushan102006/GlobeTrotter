@@ -49,10 +49,76 @@ async function deleteTripController(req, res) {
   });
 }
 
+async function addStopController(req, res) {
+  const trip = await tripService.addStopToTrip(req.user.id, req.params.tripId, req.body);
+
+  return res.status(201).json({
+    status: 'success',
+    message: 'Trip stop added successfully',
+    response: trip,
+  });
+}
+
+async function updateStopController(req, res) {
+  const trip = await tripService.updateStopInTrip(req.user.id, req.params.tripId, req.params.stopId, req.body);
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Trip stop updated successfully',
+    response: trip,
+  });
+}
+
+async function deleteStopController(req, res) {
+  const trip = await tripService.deleteStopFromTrip(req.user.id, req.params.tripId, req.params.stopId);
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Trip stop deleted successfully',
+    response: trip,
+  });
+}
+
+async function addActivityController(req, res) {
+  const trip = await tripService.addActivityToTrip(req.user.id, req.params.tripId, req.body);
+
+  return res.status(201).json({
+    status: 'success',
+    message: 'Trip activity added successfully',
+    response: trip,
+  });
+}
+
+async function updateActivityController(req, res) {
+  const trip = await tripService.updateActivityInTrip(req.user.id, req.params.tripId, req.params.activityId, req.body);
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Trip activity updated successfully',
+    response: trip,
+  });
+}
+
+async function deleteActivityController(req, res) {
+  const trip = await tripService.deleteActivityFromTrip(req.user.id, req.params.tripId, req.params.activityId);
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Trip activity deleted successfully',
+    response: trip,
+  });
+}
+
 module.exports = {
   createTripController,
   getTripsController,
   getTripController,
   updateTripController,
   deleteTripController,
+  addStopController,
+  updateStopController,
+  deleteStopController,
+  addActivityController,
+  updateActivityController,
+  deleteActivityController,
 };

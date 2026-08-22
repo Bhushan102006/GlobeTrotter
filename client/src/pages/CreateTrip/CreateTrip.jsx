@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Calendar, ImagePlus, ArrowRight, ArrowLeft, MapPin, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { tripApi } from '../../services/api';
 import './CreateTrip.css';
 
 const steps = [
@@ -20,6 +21,7 @@ export default function CreateTrip() {
   const [stops, setStops] = useState(['Tokyo', 'Kyoto']);
   const [newStopInput, setNewStopInput] = useState('');
   const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
   const handleAddStop = (name) => {
@@ -41,6 +43,46 @@ export default function CreateTrip() {
     }
     setError('');
     setActiveStep(2);
+  };
+
+  const handleSaveTrip = async () => {
+    if (!tripName || !startDate || !endDate) {
+      setError('Please complete Trip Name, Start Date, and End Date before saving.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError('');
+
+      const payload = {
+        name: tripName,
+        destination: stops[0] || '',
+        description,
+        startDate,
+        endDate,
+        status: 'planning',
+        travelers: 1,
+        budget: 0,
+        spent: 0,
+        stops: stops.map((stop, index) => ({
+          city: stop,
+          country: '',
+          startDate,
+          endDate,
+          notes: '',
+          order: index,
+        })),
+        activities: [],
+      };
+
+      await tripApi.create(payload);
+      navigate('/my-trips');
+    } catch (err) {
+      setError(err.message || 'Unable to create trip. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

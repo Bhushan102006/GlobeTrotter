@@ -1,6 +1,7 @@
-import { NavLink, Link } from 'react-router-dom';
-import { Globe, Bell, Menu, Send } from 'lucide-react';
-import { currentUser } from '../../data/mockData';
+import { useMemo } from 'react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { Globe, Bell, Menu, LogOut } from 'lucide-react';
+import { clearAuth, getStoredUser } from '../../services/api';
 import './Navbar.css';
 
 const navItems = [
@@ -14,6 +15,18 @@ const navItems = [
 ];
 
 export default function Navbar() {
+  const navigate = useNavigate();
+  const user = useMemo(() => getStoredUser() || {
+    firstName: 'Traveler',
+    lastName: 'User',
+    role: 'Explorer',
+  }, []);
+
+  const handleLogout = () => {
+    clearAuth();
+    navigate('/login');
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-inner">
@@ -43,13 +56,18 @@ export default function Navbar() {
 
           <Link to="/profile" className="user-menu" style={{ textDecoration: 'none' }}>
             <div className="user-info">
-              <div className="user-name">{currentUser.firstName} {currentUser.lastName}</div>
-              <div className="user-role">{currentUser.role}</div>
+              <div className="user-name">{user.firstName} {user.lastName}</div>
+              <div className="user-role">{user.role}</div>
             </div>
             <div className="user-avatar">
-              {currentUser.firstName[0]}{currentUser.lastName[0]}
+              {String(user.firstName || 'T').charAt(0)}{String(user.lastName || 'U').charAt(0)}
             </div>
           </Link>
+
+          <button className="btn btn-secondary btn-sm" onClick={handleLogout} aria-label="Logout" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <LogOut size={16} />
+            Logout
+          </button>
 
           <button className="mobile-menu-btn" aria-label="Menu">
             <Menu size={22} />

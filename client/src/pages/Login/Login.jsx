@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Globe, Mail, Lock, EyeOff, Eye, ArrowRight, MapPin, Map, Phone } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
+import { authApi, setStoredToken, setStoredUser } from '../../services/api';
 import './Login.css';
 
 export default function Login() {
@@ -9,16 +10,65 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate('/dashboard');
+    setError('');
+
+    if (isSignup) {
+      if (!firstName || !lastName || !email || !password || !confirmPassword) {
+        setError('Please complete all signup fields.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+    } else if (!email || !password) {
+      setError('Email and password are required.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const payload = isSignup
+        ? {
+            firstName,
+            lastName,
+            email,
+            password,
+            phone,
+            city,
+            country,
+            additionalInfo: '',
+          }
+        : { email, password };
+
+      const response = isSignup
+        ? await authApi.register(payload)
+        : await authApi.login(payload);
+
+      const { accessToken, user } = response.response;
+      setStoredToken(accessToken);
+      setStoredUser(user);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Authentication failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -37,19 +87,25 @@ export default function Login() {
         </p>
 
         <form className="login-form" onSubmit={handleSubmit}>
+          {error && (
+            <div className="error-message" style={{ marginBottom: '1rem', color: '#ef4444', fontWeight: 600 }}>
+              {error}
+            </div>
+          )}
+
           {isSignup && (
             <>
               <div className="name-row">
                 <div className="input-group">
                   <label>First Name</label>
                   <div className="input-wrapper">
-                    <input type="text" placeholder="Alex" />
+                    <input type="text" placeholder="Alex" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                   </div>
                 </div>
                 <div className="input-group">
                   <label>Last Name</label>
                   <div className="input-wrapper">
-                    <input type="text" placeholder="Rivera" />
+                    <input type="text" placeholder="Rivera" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -161,8 +217,8 @@ export default function Login() {
             </div>
           )}
 
-          <button type="submit" className="login-btn">
-            {isSignup ? 'Create Account' : 'Sign In'}
+          <button type="submit" className="login-btn" disabled={isSubmitting}>
+            {isSubmitting ? (isSignup ? 'Creating Account...' : 'Signing In...') : (isSignup ? 'Create Account' : 'Sign In')}
             <ArrowRight size={18} />
           </button>
 

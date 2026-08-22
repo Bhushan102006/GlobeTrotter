@@ -112,6 +112,21 @@ async function forgotPasswordController(req, res) {
   });
 }
 
+async function resetPasswordController(req, res) {
+  const { email, token, newPassword } = req.body;
+
+  const result = await authService.resetPasswordUser({
+    email,
+    token,
+    newPassword,
+  });
+
+  return res.status(200).json({
+    status: "success",
+    message: result.message,
+  });
+}
+
 async function refreshController(req, res) {
   const refreshToken = req.cookies.refreshToken;
   const result = await authService.refreshUser(refreshToken);
@@ -134,5 +149,6 @@ module.exports = {
   logoutController,
   logoutAllController,
   forgotPasswordController,
+  resetPasswordController,
   refreshController,
 };

@@ -208,6 +208,43 @@ async function forgotPasswordUser(email) {
   };
 }
 
+async function resetPasswordUser({ email, token, newPassword }) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw new UnauthorizedError("Email is required");
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    throw new UnauthorizedError("New password must be at least 8 characters long");
+  }
+
+  const user = await User.findOne({ email: normalizedEmail });
+
+  if (!user || !user.resetToken || !user.resetTokenExpiry) {
+    throw new UnauthorizedError("Invalid or expired reset token");
+  }
+
+  const isTokenValid = user.resetToken === token && user.resetTokenExpiry > new Date();
+
+  if (!isTokenValid) {
+    throw new UnauthorizedError("Invalid or expired reset token");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedPassword;
+  user.resetToken = null;
+  user.resetTokenExpiry = null;
+  await user.save();
+
+  await sessionService.revokeAllSessionsForUser(user._id);
+
+  return {
+    success: true,
+    message: "Password reset successfully",
+  };
+}
+
 async function refreshUser(refreshToken) {
   if (!refreshToken) {
     throw new UnauthorizedError("Refresh token missing");
@@ -256,5 +293,6 @@ module.exports = {
   logoutUser,
   logoutAllUser,
   forgotPasswordUser,
+  resetPasswordUser,
   refreshUser,
 };

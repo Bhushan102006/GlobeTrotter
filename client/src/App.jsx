@@ -15,16 +15,26 @@ import Community from './pages/Community/Community';
 import Profile from './pages/Profile/Profile';
 import Admin from './pages/Admin/Admin';
 
+function hasToken() {
+  return Boolean(localStorage.getItem('globetrotter_access_token'));
+}
+
+function ProtectedRoute({ children }) {
+  return hasToken() ? children : <Navigate to="/login" replace />;
+}
+
+function PublicOnlyRoute({ children }) {
+  return hasToken() ? <Navigate to="/dashboard" replace /> : children;
+}
+
 export default function App() {
   return (
     <TripProvider>
       <BrowserRouter>
         <Routes>
-          {/* Auth Route without Layout */}
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
 
-          {/* App Routes wrapped in common Layout (Navbar + Footer) */}
-          <Route element={<Layout />}>
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/explore" element={<Explore />} />
@@ -39,8 +49,7 @@ export default function App() {
             <Route path="/admin" element={<Admin />} />
           </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to={hasToken() ? '/dashboard' : '/login'} replace />} />
         </Routes>
       </BrowserRouter>
     </TripProvider>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Calendar, ImagePlus, ArrowRight, ArrowLeft, MapPin, Plus, Trash2, CheckCircle2, Sparkles } from 'lucide-react';
 import { useTrips } from '../../context/TripContext';
+import { tripApi } from '../../services/api';
 import './CreateTrip.css';
 
 const steps = [
@@ -22,6 +23,7 @@ export default function CreateTrip() {
   const [newStopInput, setNewStopInput] = useState('');
   const [error, setError] = useState('');
   const [prefilledBanner, setPrefilledBanner] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,7 +66,7 @@ export default function CreateTrip() {
     setActiveStep(2);
   };
 
-  const handleSaveTrip = () => {
+  const handleSaveTrip = async () => {
     if (!tripName || !startDate || !endDate) {
       setError('Please ensure Trip Name, Start Date, and End Date are set.');
       setActiveStep(1);
@@ -91,9 +93,36 @@ export default function CreateTrip() {
       description: description
     };
 
-    addTrip(newTrip);
-    alert(`🎉 Trip "${tripName}" created successfully! It is now saved and available under My Trips.`);
-    navigate('/my-trips');
+    try {
+      setIsSaving(true);
+      setError('');
+
+      // Try API persistence first if available
+      try {
+        await tripApi.create({
+          name: tripName,
+          destination: stops[0] || '',
+          description,
+          startDate,
+          endDate,
+          status: 'planning',
+          travelers: 2,
+          budget: 150000,
+          spent: 0,
+          stops: stops.map((stop, index) => ({ city: stop, country: '', startDate, endDate, notes: '', order: index })),
+          activities: [],
+        });
+      } catch (e) {
+        // Fallback to local context if API server is offline
+      }
+
+      addTrip(newTrip);
+      navigate('/my-trips');
+    } catch (err) {
+      setError(err.message || 'Unable to create trip. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

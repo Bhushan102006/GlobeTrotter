@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { User, Shield, Lock, Globe as GlobeIcon, Bell, Sparkles, Check } from 'lucide-react';
-import { currentUser } from '../../data/mockData';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User, Shield, Lock, Bell, Sparkles, Check } from 'lucide-react';
+import { getStoredUser, setStoredUser, clearAuth, userApi } from '../../services/api';
 import './Profile.css';
 
 const tabs = [
@@ -12,19 +13,78 @@ const tabs = [
 ];
 
 export default function Profile() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('personal');
   const [formData, setFormData] = useState({
-    firstName: currentUser.firstName,
-    lastName: currentUser.lastName,
-    email: currentUser.email,
-    bio: currentUser.bio,
+    firstName: '',
+    lastName: '',
+    email: '',
+    bio: '',
   });
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const localUser = getStoredUser();
+        if (localUser) {
+          setFormData({
+            firstName: localUser.firstName || '',
+            lastName: localUser.lastName || '',
+            email: localUser.email || '',
+            bio: localUser.additionalInfo || '',
+          });
+        }
+
+        const response = await userApi.getProfile();
+        const user = response.response;
+
+        if (user) {
+          setFormData({
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            bio: user.additionalInfo || '',
+          });
+          setStoredUser(user);
+        }
+      } catch (error) {
+        if (error.status === 401) {
+          clearAuth();
+          navigate('/login');
+          return;
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [navigate]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+
+    try {
+      const response = await userApi.updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        city: '',
+        country: '',
+        additionalInfo: formData.bio,
+      });
+
+      const updatedUser = response.response;
+      setStoredUser(updatedUser);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      if (error.status === 401) {
+        clearAuth();
+        navigate('/login');
+      }
+    }
   };
 
   return (
@@ -32,17 +92,16 @@ export default function Profile() {
       <div className="profile-hero">
         <div className="profile-hero-inner">
           <div className="profile-avatar-lg">
-            {formData.firstName[0]}{formData.lastName[0]}
+            {(formData.firstName || 'T').charAt(0)}{(formData.lastName || 'U').charAt(0)}
           </div>
           <div className="profile-header-info">
-            <h1>{formData.firstName} {formData.lastName}</h1>
+            <h1>{formData.firstName || 'Traveler'} {formData.lastName || 'User'}</h1>
             <div className="profile-email">
-              <User size={14} /> {formData.email} • Joined June 2023
+              <User size={14} /> {formData.email || 'Loading profile...'} • Joined June 2023
             </div>
             <div className="profile-badges">
-              {currentUser.badges.map(b => (
-                <span key={b} className="badge badge-primary">{b}</span>
-              ))}
+              <span className="badge badge-primary">Explorer</span>
+              <span className="badge badge-primary">Pro Member</span>
             </div>
           </div>
         </div>
@@ -68,49 +127,53 @@ export default function Profile() {
         <div>
           <div className="profile-form-panel">
             <h2>Personal Information</h2>
-            <form onSubmit={handleSave}>
-              <div className="form-row">
+            {loading ? (
+              <p style={{ color: 'var(--color-gray-500)' }}>Loading profile...</p>
+            ) : (
+              <form onSubmit={handleSave}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>First Name</label>
+                    <input
+                      type="text"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Last Name</label>
+                    <input
+                      type="text"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="form-group">
-                  <label>First Name</label>
+                  <label>Email Address</label>
                   <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
+
                 <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  <label>Short Bio</label>
+                  <textarea
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                   />
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Short Bio</label>
-                <textarea
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                />
-              </div>
-
-              <div className="save-btn-row">
-                <button type="submit" className="btn btn-primary">
-                  {saved ? <><Check size={16} /> Changes Saved</> : 'Save Changes'}
-                </button>
-              </div>
-            </form>
+                <div className="save-btn-row">
+                  <button type="submit" className="btn btn-primary">
+                    {saved ? <><Check size={16} /> Changes Saved</> : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           <div className="preferences-section">

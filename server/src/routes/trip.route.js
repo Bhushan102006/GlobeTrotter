@@ -13,4 +13,12 @@ router.get('/:tripId', asyncHandler(tripController.getTripController));
 router.put('/:tripId', asyncHandler(tripController.updateTripController));
 router.delete('/:tripId', asyncHandler(tripController.deleteTripController));
 
+router.post('/:tripId/stops', asyncHandler(tripController.addStopController));
+router.put('/:tripId/stops/:stopId', asyncHandler(tripController.updateStopController));
+router.delete('/:tripId/stops/:stopId', asyncHandler(tripController.deleteStopController));
+
+router.post('/:tripId/activities', asyncHandler(tripController.addActivityController));
+router.put('/:tripId/activities/:activityId', asyncHandler(tripController.updateActivityController));
+router.delete('/:tripId/activities/:activityId', asyncHandler(tripController.deleteActivityController));
+
 module.exports = router;

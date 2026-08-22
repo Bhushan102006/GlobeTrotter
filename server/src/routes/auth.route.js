@@ -6,10 +6,11 @@ const asyncHandler = require('../middlewares/asyncHandler');
 const router = express.Router();
 
 router.post('/register', validateMiddleware.validateRegister, asyncHandler(authControllers.registerController));
-router.post('/login', asyncHandler(authControllers.loginController));
+router.post('/login', validateMiddleware.validateLogin, asyncHandler(authControllers.loginController));
 router.post('/logout', asyncHandler(authControllers.logoutController));
 router.post('/logout-all', asyncHandler(authControllers.logoutAllController));
-router.post('/forgot-password', asyncHandler(authControllers.forgotPasswordController));
+router.post('/forgot-password', validateMiddleware.validateForgotPassword, asyncHandler(authControllers.forgotPasswordController));
+router.post('/reset-password', validateMiddleware.validateResetPassword, asyncHandler(authControllers.resetPasswordController));
 router.post('/refresh', asyncHandler(authControllers.refreshController));
 
 module.exports = router;

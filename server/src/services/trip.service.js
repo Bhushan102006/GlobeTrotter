@@ -105,10 +105,198 @@ async function deleteTrip(userId, tripId) {
   return { success: true };
 }
 
+async function addStopToTrip(userId, tripId, payload = {}) {
+  const trip = await Trip.findOne({ _id: tripId, userId });
+
+  if (!trip) {
+    const error = new Error('Trip not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const city = (payload.city || '').trim();
+
+  if (!city) {
+    const error = new Error('Stop city is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  trip.stops.push({
+    city,
+    country: payload.country || '',
+    startDate: payload.startDate || null,
+    endDate: payload.endDate || null,
+    notes: payload.notes || '',
+    order: payload.order ?? trip.stops.length,
+  });
+
+  await trip.save();
+
+  return normalizeTrip(trip);
+}
+
+async function updateStopInTrip(userId, tripId, stopId, payload = {}) {
+  const trip = await Trip.findOne({ _id: tripId, userId });
+
+  if (!trip) {
+    const error = new Error('Trip not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const stop = trip.stops.id(stopId);
+
+  if (!stop) {
+    const error = new Error('Stop not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const allowedFields = ['city', 'country', 'startDate', 'endDate', 'notes', 'order'];
+
+  allowedFields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      stop[field] = payload[field];
+    }
+  });
+
+  if (stop.city !== undefined && !String(stop.city).trim()) {
+    const error = new Error('Stop city is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await trip.save();
+
+  return normalizeTrip(trip);
+}
+
+async function deleteStopFromTrip(userId, tripId, stopId) {
+  const trip = await Trip.findOne({ _id: tripId, userId });
+
+  if (!trip) {
+    const error = new Error('Trip not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const stop = trip.stops.id(stopId);
+
+  if (!stop) {
+    const error = new Error('Stop not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  stop.deleteOne();
+  await trip.save();
+
+  return normalizeTrip(trip);
+}
+
+async function addActivityToTrip(userId, tripId, payload = {}) {
+  const trip = await Trip.findOne({ _id: tripId, userId });
+
+  if (!trip) {
+    const error = new Error('Trip not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const title = (payload.title || '').trim();
+
+  if (!title) {
+    const error = new Error('Activity title is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  trip.activities.push({
+    title,
+    category: payload.category || 'General',
+    date: payload.date || null,
+    time: payload.time || '',
+    duration: payload.duration || '',
+    cost: payload.cost || 0,
+    status: payload.status || 'planned',
+    description: payload.description || '',
+  });
+
+  await trip.save();
+
+  return normalizeTrip(trip);
+}
+
+async function updateActivityInTrip(userId, tripId, activityId, payload = {}) {
+  const trip = await Trip.findOne({ _id: tripId, userId });
+
+  if (!trip) {
+    const error = new Error('Trip not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const activity = trip.activities.id(activityId);
+
+  if (!activity) {
+    const error = new Error('Activity not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const allowedFields = ['title', 'category', 'date', 'time', 'duration', 'cost', 'status', 'description'];
+
+  allowedFields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      activity[field] = payload[field];
+    }
+  });
+
+  if (activity.title !== undefined && !String(activity.title).trim()) {
+    const error = new Error('Activity title is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await trip.save();
+
+  return normalizeTrip(trip);
+}
+
+async function deleteActivityFromTrip(userId, tripId, activityId) {
+  const trip = await Trip.findOne({ _id: tripId, userId });
+
+  if (!trip) {
+    const error = new Error('Trip not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const activity = trip.activities.id(activityId);
+
+  if (!activity) {
+    const error = new Error('Activity not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  activity.deleteOne();
+  await trip.save();
+
+  return normalizeTrip(trip);
+}
+
 module.exports = {
   createTrip,
   getTripsByUser,
   getTripById,
   updateTrip,
   deleteTrip,
+  addStopToTrip,
+  updateStopInTrip,
+  deleteStopFromTrip,
+  addActivityToTrip,
+  updateActivityInTrip,
+  deleteActivityFromTrip,
 };

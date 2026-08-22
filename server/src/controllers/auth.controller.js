@@ -44,7 +44,7 @@ async function registerController(req, res, next) {
 
   return res.status(201).json({
     status: "success",
-    message: "User register sucessfully",
+    message: "User registered successfully",
     response: {
       user,
       accessToken,
@@ -72,7 +72,7 @@ async function loginController(req, res, next) {
 
   return res.status(200).json({
     status: "success",
-    message: "User login sucessfully",
+    message: "User logged in successfully",
     response: {
       user,
       accessToken,
@@ -80,8 +80,59 @@ async function loginController(req, res, next) {
   });
 }
 
+async function logoutController(req, res) {
+  const refreshToken = req.cookies.refreshToken;
+  await authService.logoutUser(refreshToken);
+  res.clearCookie("refreshToken", getRefreshTokenOptions());
+  return res.status(200).json({
+    status: "success",
+    message: "User logged out successfully",
+  });
+}
+
+async function logoutAllController(req, res) {
+  const refreshToken = req.cookies.refreshToken;
+  await authService.logoutAllUser(refreshToken);
+  res.clearCookie("refreshToken", getRefreshTokenOptions());
+  return res.status(200).json({
+    status: "success",
+    message: "All sessions logged out successfully",
+  });
+}
+
+async function forgotPasswordController(req, res) {
+  const { email } = req.body;
+
+  const result = await authService.forgotPasswordUser(email);
+
+  return res.status(200).json({
+    status: "success",
+    message: result.message,
+    ...(result.resetToken ? { resetToken: result.resetToken } : {}),
+  });
+}
+
+async function refreshController(req, res) {
+  const refreshToken = req.cookies.refreshToken;
+  const result = await authService.refreshUser(refreshToken);
+
+  res.cookie("refreshToken", result.refreshToken, getRefreshTokenOptions());
+
+  return res.status(200).json({
+    status: "success",
+    message: "Token refreshed successfully",
+    response: {
+      user: result.user,
+      accessToken: result.accessToken,
+    },
+  });
+}
 
 module.exports = {
   registerController,
-  loginController
+  loginController,
+  logoutController,
+  logoutAllController,
+  forgotPasswordController,
+  refreshController,
 };

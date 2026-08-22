@@ -7,5 +7,9 @@ const router = express.Router();
 
 router.post('/register', validateMiddleware.validateRegister, asyncHandler(authControllers.registerController));
 router.post('/login', asyncHandler(authControllers.loginController));
+router.post('/logout', asyncHandler(authControllers.logoutController));
+router.post('/logout-all', asyncHandler(authControllers.logoutAllController));
+router.post('/forgot-password', asyncHandler(authControllers.forgotPasswordController));
+router.post('/refresh', asyncHandler(authControllers.refreshController));
 
 module.exports = router;

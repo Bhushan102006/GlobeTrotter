@@ -3,9 +3,8 @@ const tokenService = require("./token.service");
 const bcrypt = require("bcrypt");
 const sessionService = require("./session.service");
 const crypto = require("crypto");
-const ConflictError = require('../errors/ConflictError')
-const UnauthorizedError = require('../errors/UnauthorizedError')
-
+const ConflictError = require('../errors/ConflictError');
+const UnauthorizedError = require('../errors/UnauthorizedError');
 
 async function registerUser(data) {
   const {
@@ -147,4 +146,115 @@ async function loginUser(data) {
   };
 }
 
-module.exports={loginUser,registerUser}
+async function logoutUser(refreshToken) {
+  if (!refreshToken) {
+    throw new UnauthorizedError("Refresh token missing");
+  }
+
+  const decodedToken = tokenService.verifyRefreshToken(refreshToken);
+  const session = await sessionService.findSessionByRefreshToken(refreshToken);
+
+  if (!session || session.userId.toString() !== decodedToken.sub.toString()) {
+    throw new UnauthorizedError("Invalid session");
+  }
+
+  await sessionService.revokeSessionByRefreshToken(refreshToken);
+
+  return { success: true };
+}
+
+async function logoutAllUser(refreshToken) {
+  if (!refreshToken) {
+    throw new UnauthorizedError("Refresh token missing");
+  }
+
+  const decodedToken = tokenService.verifyRefreshToken(refreshToken);
+  const session = await sessionService.findSessionByRefreshToken(refreshToken);
+
+  if (!session || session.userId.toString() !== decodedToken.sub.toString()) {
+    throw new UnauthorizedError("Invalid session");
+  }
+
+  await sessionService.revokeAllSessionsForUser(session.userId);
+
+  return { success: true };
+}
+
+async function forgotPasswordUser(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw new UnauthorizedError("Email is required");
+  }
+
+  const user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    return {
+      success: true,
+      message: "If the email is registered, a reset link has been sent.",
+    };
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  user.resetToken = resetToken;
+  user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+  await user.save();
+
+  return {
+    success: true,
+    message: "Password reset instructions have been sent to your email.",
+    resetToken,
+  };
+}
+
+async function refreshUser(refreshToken) {
+  if (!refreshToken) {
+    throw new UnauthorizedError("Refresh token missing");
+  }
+
+  const decodedToken = tokenService.verifyRefreshToken(refreshToken);
+  const session = await sessionService.findSessionByRefreshToken(refreshToken);
+
+  if (!session || session.userId.toString() !== decodedToken.sub.toString()) {
+    throw new UnauthorizedError("Invalid or expired session");
+  }
+
+  const user = await User.findById(session.userId);
+
+  if (!user) {
+    throw new UnauthorizedError("User not found");
+  }
+
+  const accessToken = tokenService.generateAccessToken({
+    sub: user._id,
+    role: user.role,
+  });
+
+  return {
+    user: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      city: user.city,
+      country: user.country,
+      additionalInfo: user.additionalInfo,
+      role: user.role,
+      isVerified: user.isVerified,
+    },
+    accessToken,
+    refreshToken,
+  };
+}
+
+module.exports = {
+  loginUser,
+  registerUser,
+  logoutUser,
+  logoutAllUser,
+  forgotPasswordUser,
+  refreshUser,
+};

@@ -15,7 +15,12 @@ function generateRefreshToken(payload) {
   });
 }
 
+function verifyRefreshToken(token) {
+  return jwt.verify(token, REFRESH_TOKEN_SECRET);
+}
+
 module.exports = {
   generateAccessToken,
   generateRefreshToken,
+  verifyRefreshToken,
 };

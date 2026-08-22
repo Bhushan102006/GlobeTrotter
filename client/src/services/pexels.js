@@ -1,5 +1,5 @@
 // Pexels API service with caching
-const API_KEY = 'wjEcYBXpW2BKoGfKYOAS7p0rmdo8ox94mPaTWIpSUd0IkDYaFcO78AqP';
+const API_KEY = import.meta.env.VITE_PEXELS_API_KEY || 'wjEcYBXpW2BKoGfKYOAS7p0rmdo8ox94mPaTWIpSUd0IkDYaFcO78AqP';
 const BASE_URL = 'https://api.pexels.com/v1';
 
 const cache = new Map();

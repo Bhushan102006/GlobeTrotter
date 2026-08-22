@@ -10,10 +10,13 @@ dist/
 # Environment files
 .env
 .env.*
+!.env.example
+!*.example
 server/.env
 server/.env.*
 client/.env
 client/.env.*
+!client/.env.example
 
 # Logs
 npm-debug.log*

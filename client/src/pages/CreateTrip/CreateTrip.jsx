@@ -11,6 +11,10 @@ const steps = [
 
 export default function CreateTrip() {
   const [activeStep, setActiveStep] = useState(1);
+  const [tripName, setTripName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   return (
@@ -45,7 +49,12 @@ export default function CreateTrip() {
             <label>Trip Name</label>
             <div className="date-input-wrapper">
               <Search size={16} />
-              <input type="text" placeholder="e.g., Coastal Road Trip, Kyoto Explorer..." />
+              <input 
+                type="text" 
+                placeholder="e.g., Coastal Road Trip, Kyoto Explorer..." 
+                value={tripName}
+                onChange={(e) => { setTripName(e.target.value); setError(''); }}
+              />
             </div>
           </div>
 
@@ -54,14 +63,22 @@ export default function CreateTrip() {
               <label>Start Date</label>
               <div className="date-input-wrapper">
                 <Calendar size={16} />
-                <input type="date" />
+                <input 
+                  type="date" 
+                  value={startDate}
+                  onChange={(e) => { setStartDate(e.target.value); setError(''); }}
+                />
               </div>
             </div>
             <div className="form-group">
               <label>End Date</label>
               <div className="date-input-wrapper">
                 <Calendar size={16} />
-                <input type="date" />
+                <input 
+                  type="date" 
+                  value={endDate}
+                  onChange={(e) => { setEndDate(e.target.value); setError(''); }}
+                />
               </div>
             </div>
           </div>
@@ -81,8 +98,15 @@ export default function CreateTrip() {
             </div>
           </div>
 
+          {error && <div className="error-message" style={{color: 'var(--color-primary, #ef4444)', marginBottom: '16px', fontSize: '14px', fontWeight: '500'}}>{error}</div>}
           <div className="form-actions">
-            <button className="btn btn-primary btn-lg" onClick={() => navigate('/itinerary')}>
+            <button className="btn btn-primary btn-lg" onClick={() => {
+              if (!tripName || !startDate || !endDate) {
+                setError('Please fill in Trip Name, Start Date, and End Date.');
+                return;
+              }
+              navigate('/itinerary');
+            }}>
               Continue
               <ArrowRight size={18} />
             </button>

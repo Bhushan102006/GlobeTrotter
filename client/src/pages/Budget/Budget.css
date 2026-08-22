@@ -1,4 +1,4 @@
-.budget-page { padding-bottom: var(--space-16); }
+.budget-page { padding-bottom: var(--space-16); padding-top: 72px; }
 .budget-header {
   background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-primary-50) 100%);
   padding: var(--space-8) 0;

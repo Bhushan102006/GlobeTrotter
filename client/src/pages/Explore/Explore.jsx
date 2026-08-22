@@ -85,7 +85,10 @@ export default function Explore() {
               <div className="dest-card-info">
                 <h3>{dest.name}</h3>
                 <p className="dest-location">{dest.country}, {dest.region}</p>
-                <button className="add-to-trip-btn">
+                <button 
+                  className="add-to-trip-btn"
+                  onClick={() => alert(`Added ${dest.name} to your trip!`)}
+                >
                   <Plus size={14} />
                   Add to Trip
                 </button>

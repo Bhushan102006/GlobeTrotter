@@ -197,16 +197,20 @@ export default function Budget() {
 
           <div className="top-expenses">
             <h3>Top Expenses <a href="#">View All</a></h3>
-            {bd.topExpenses.map((exp, i) => (
-              <div key={i} className="expense-item">
-                <div className="expense-icon">{expenseIcons[exp.icon] || '💰'}</div>
-                <div className="expense-info">
-                  <h4>{exp.name}</h4>
-                  <p>{exp.detail}</p>
+            {bd.topExpenses && bd.topExpenses.length > 0 ? (
+              bd.topExpenses.map((exp, i) => (
+                <div key={i} className="expense-item">
+                  <div className="expense-icon">{expenseIcons[exp.icon] || '💰'}</div>
+                  <div className="expense-info">
+                    <h4>{exp.name}</h4>
+                    <p>{exp.detail}</p>
+                  </div>
+                  <div className="expense-amount">${exp.amount.toLocaleString()}</div>
                 </div>
-                <div className="expense-amount">${exp.amount.toLocaleString()}</div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p style={{ color: 'var(--color-gray-500)', fontSize: '14px', marginTop: '16px' }}>No top expenses reported yet.</p>
+            )}
           </div>
         </div>
       </div>

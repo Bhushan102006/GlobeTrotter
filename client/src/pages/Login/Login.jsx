@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Mail, Lock, EyeOff, Eye, ArrowRight, MapPin, Map } from 'lucide-react';
+import { Globe, Mail, Lock, EyeOff, Eye, ArrowRight, MapPin, Map, Phone } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
 import './Login.css';
 
@@ -9,6 +9,11 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
@@ -33,20 +38,62 @@ export default function Login() {
 
         <form className="login-form" onSubmit={handleSubmit}>
           {isSignup && (
-            <div className="name-row">
-              <div className="input-group">
-                <label>First Name</label>
-                <div className="input-wrapper">
-                  <input type="text" placeholder="Alex" />
+            <>
+              <div className="name-row">
+                <div className="input-group">
+                  <label>First Name</label>
+                  <div className="input-wrapper">
+                    <input type="text" placeholder="Alex" />
+                  </div>
+                </div>
+                <div className="input-group">
+                  <label>Last Name</label>
+                  <div className="input-wrapper">
+                    <input type="text" placeholder="Rivera" />
+                  </div>
                 </div>
               </div>
+
               <div className="input-group">
-                <label>Last Name</label>
+                <label>Phone Number</label>
                 <div className="input-wrapper">
-                  <input type="text" placeholder="Rivera" />
+                  <Phone size={18} className="field-icon" />
+                  <input
+                    type="tel"
+                    placeholder="+1 (555) 000-0000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
                 </div>
               </div>
-            </div>
+
+              <div className="name-row">
+                <div className="input-group">
+                  <label>City</label>
+                  <div className="input-wrapper">
+                    <MapPin size={18} className="field-icon" />
+                    <input
+                      type="text"
+                      placeholder="New York"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="input-group">
+                  <label>Country</label>
+                  <div className="input-wrapper">
+                    <Map size={18} className="field-icon" />
+                    <input
+                      type="text"
+                      placeholder="United States"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           <div className="input-group">
@@ -81,6 +128,28 @@ export default function Login() {
               </button>
             </div>
           </div>
+
+          {isSignup && (
+            <div className="input-group">
+              <label>Confirm Password</label>
+              <div className="input-wrapper">
+                <Lock size={18} className="field-icon" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                </button>
+              </div>
+            </div>
+          )}
 
           {!isSignup && (
             <div className="login-options">
@@ -133,7 +202,7 @@ export default function Login() {
           <p className="hero-description">
             Discover secluded coves and cliffside dining in our curated Mediterranean itinerary.
           </p>
-          <div className="hero-map-card">
+          <div className="hero-map-card" onClick={() => navigate('/itinerary')}>
             <Map size={16} />
             View in Trip Planner
           </div>

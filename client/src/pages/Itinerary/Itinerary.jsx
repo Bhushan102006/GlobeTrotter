@@ -28,6 +28,10 @@ export default function Itinerary() {
   const [activeDay, setActiveDay] = useState(0);
   const data = itineraryData;
   const currentStop = data.stops[activeStop];
+  const displayDays = activeStop === 0 ? data.days : [
+    { day: 1, date: currentStop.startDate.split(' ')[1] || '1', weekday: '...', selected: true }
+  ];
+  const displayActivities = activeStop === 0 ? data.activities : [];
 
   return (
     <div className="itinerary-page">
@@ -86,7 +90,7 @@ export default function Itinerary() {
             ))}
           </div>
 
-          <button className="add-dest-btn">
+          <button className="add-dest-btn" onClick={() => prompt('Enter new destination name:')}>
             <Plus size={16} /> Add Destination
           </button>
         </div>
@@ -106,7 +110,7 @@ export default function Itinerary() {
 
           {/* Day Tabs */}
           <div className="day-tabs">
-            {data.days.map((d, i) => (
+            {displayDays.map((d, i) => (
               <button
                 key={i}
                 className={`day-tab${activeDay === i ? ' active' : ''}`}
@@ -121,33 +125,40 @@ export default function Itinerary() {
 
           {/* Activities */}
           <div className="activity-list">
-            {data.activities.map(act => (
-              <div key={act.id} className="activity-card">
-                <div className="activity-time">
-                  <div className="time">
-                    {act.time}
-                    <span className="time-dot" style={{ background: statusDots[act.status] || 'var(--color-gray-300)' }} />
+            {displayActivities.length > 0 ? (
+              displayActivities.map(act => (
+                <div key={act.id} className="activity-card">
+                  <div className="activity-time">
+                    <div className="time">
+                      {act.time}
+                      <span className="time-dot" style={{ background: statusDots[act.status] || 'var(--color-gray-300)' }} />
+                    </div>
+                    <div className="duration">{act.duration}</div>
                   </div>
-                  <div className="duration">{act.duration}</div>
-                </div>
-                <div className="activity-thumb">
-                  <PexelsImage query={act.imageQuery} alt={act.name} size="small" />
-                </div>
-                <div className="activity-info">
-                  <h4>{act.name}</h4>
-                  <p>{act.description}</p>
-                  <div className="activity-tags">
-                    <span className={`category-tag ${categoryColors[act.category] || ''}`}>
-                      {categoryIcons[act.category]} {act.category}
-                    </span>
-                    {act.cost && <span className="tag">$ {act.cost}</span>}
-                    {act.tags && act.tags.map(t => (
-                      <span key={t} className="tag"><Ticket size={10} /> {t}</span>
-                    ))}
+                  <div className="activity-thumb">
+                    <PexelsImage query={act.imageQuery} alt={act.name} size="small" />
+                  </div>
+                  <div className="activity-info">
+                    <h4>{act.name}</h4>
+                    <p>{act.description}</p>
+                    <div className="activity-tags">
+                      <span className={`category-tag ${categoryColors[act.category] || ''}`}>
+                        {categoryIcons[act.category]} {act.category}
+                      </span>
+                      {act.cost && <span className="tag">$ {act.cost}</span>}
+                      {act.tags && act.tags.map(t => (
+                        <span key={t} className="tag"><Ticket size={10} /> {t}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-gray-500)' }}>
+                <p>No activities planned for {currentStop.city} yet.</p>
+                <button className="btn btn-secondary" style={{ marginTop: '1rem' }} onClick={() => prompt('Add an activity for this destination:')}>+ Add Activity</button>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

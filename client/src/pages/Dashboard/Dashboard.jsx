@@ -4,11 +4,16 @@ import { Search, SlidersHorizontal, Filter, ChevronDown, Plus, X, Globe, MapPin,
 import { PexelsImage } from '../../hooks/usePexels';
 import { topDestinations, previousTrips } from '../../data/mockData';
 import { wikiData } from '../../data/wikiData';
+import { useTrips } from '../../context/TripContext';
 import './Dashboard.css';
+
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const [selectedDest, setSelectedDest] = useState(null);
   const [addedTrips, setAddedTrips] = useState({});
+  const navigate = useNavigate();
+  const { trips } = useTrips();
 
   const handleCardClick = (destName) => {
     const key = destName.toLowerCase();
@@ -17,8 +22,7 @@ export default function Dashboard() {
   };
 
   const handleAddToTrip = (title) => {
-    setAddedTrips((prev) => ({ ...prev, [title]: true }));
-    alert(`"${title}" has been added to your trip!`);
+    navigate('/create-trip', { state: { prefillDestination: title } });
   };
 
   return (
@@ -78,11 +82,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Previous Trips */}
+      {/* Active & Previous Trips */}
       <div className="dashboard-section">
-        <h2 className="section-title">Previous Trips</h2>
+        <h2 className="section-title">Your Trips & Journeys</h2>
         <div className="previous-trips-grid">
-          {previousTrips.map((trip) => (
+          {trips.map((trip) => (
             <div
               key={trip.id}
               className="trip-card-prev"
@@ -90,14 +94,14 @@ export default function Dashboard() {
             >
               <div className="trip-card-prev-img">
                 <PexelsImage
-                  query={trip.coverQuery}
+                  query={trip.coverQuery || trip.name}
                   alt={trip.name}
                   size="medium"
                 />
               </div>
               <div className="trip-card-prev-info">
                 <h3>{trip.name}</h3>
-                <p>{trip.date} • {trip.duration}</p>
+                <p>{trip.startDate ? `${trip.startDate} - ${trip.endDate}` : 'Upcoming'} • {trip.duration ? `${trip.duration} Days` : '7 Days'}</p>
               </div>
             </div>
           ))}

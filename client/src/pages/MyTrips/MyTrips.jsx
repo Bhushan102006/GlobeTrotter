@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Calendar, SlidersHorizontal } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
-import { trips } from '../../data/mockData';
+import { useTrips } from '../../context/TripContext';
 import './MyTrips.css';
 
 const filters = ['All', 'Upcoming', 'Completed'];
@@ -15,6 +15,7 @@ const statusColors = {
 
 export default function MyTrips() {
   const [activeFilter, setActiveFilter] = useState('All');
+  const { trips } = useTrips();
 
   const filtered = activeFilter === 'All'
     ? trips

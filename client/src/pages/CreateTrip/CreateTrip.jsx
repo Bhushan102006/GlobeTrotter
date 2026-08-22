@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Calendar, ImagePlus, ArrowRight, ArrowLeft, MapPin, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, Calendar, ImagePlus, ArrowRight, ArrowLeft, MapPin, Plus, Trash2, CheckCircle2, Sparkles } from 'lucide-react';
+import { useTrips } from '../../context/TripContext';
 import './CreateTrip.css';
 
 const steps = [
@@ -20,7 +21,27 @@ export default function CreateTrip() {
   const [stops, setStops] = useState(['Tokyo', 'Kyoto']);
   const [newStopInput, setNewStopInput] = useState('');
   const [error, setError] = useState('');
+  const [prefilledBanner, setPrefilledBanner] = useState('');
+
   const navigate = useNavigate();
+  const location = useLocation();
+  const { addTrip } = useTrips();
+
+  useEffect(() => {
+    if (location.state?.prefillDestination) {
+      const dest = location.state.prefillDestination;
+      setTripName(`Trip to ${dest}`);
+      setStops([dest]);
+      
+      // Default to 1 week from today
+      const today = new Date();
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      setStartDate(today.toISOString().split('T')[0]);
+      setEndDate(nextWeek.toISOString().split('T')[0]);
+      
+      setPrefilledBanner(`✨ Added "${dest}" to your trip draft! Complete the details below.`);
+    }
+  }, [location.state]);
 
   const handleAddStop = (name) => {
     const stopName = name || newStopInput.trim();
@@ -41,6 +62,38 @@ export default function CreateTrip() {
     }
     setError('');
     setActiveStep(2);
+  };
+
+  const handleSaveTrip = () => {
+    if (!tripName || !startDate || !endDate) {
+      setError('Please ensure Trip Name, Start Date, and End Date are set.');
+      setActiveStep(1);
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24))) || 7;
+
+    const newTrip = {
+      id: Date.now(),
+      name: tripName,
+      status: 'upcoming',
+      startDate: startDate,
+      endDate: endDate,
+      duration: diffDays,
+      destinations: stops.length || 1,
+      coverQuery: stops[0]?.toLowerCase() || 'travel landscape',
+      travelers: 2,
+      budget: 150000,
+      spent: 0,
+      stops: stops,
+      description: description
+    };
+
+    addTrip(newTrip);
+    alert(`🎉 Trip "${tripName}" created successfully! It is now saved and available under My Trips.`);
+    navigate('/my-trips');
   };
 
   return (
@@ -78,6 +131,13 @@ export default function CreateTrip() {
         </div>
 
         <div className="form-panel">
+          {prefilledBanner && (
+            <div className="prefill-banner" style={{ background: 'var(--color-primary-50, #eff6ff)', color: 'var(--color-primary, #2563eb)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--color-primary-light, #bfdbfe)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500' }}>
+              <Sparkles size={16} />
+              {prefilledBanner}
+            </div>
+          )}
+
           {error && (
             <div className="error-message" style={{ color: 'var(--color-primary, #ef4444)', marginBottom: '16px', fontSize: '14px', fontWeight: '500' }}>
               {error}
@@ -253,10 +313,7 @@ export default function CreateTrip() {
                 </button>
                 <button
                   className="btn btn-primary btn-lg"
-                  onClick={() => {
-                    alert(`Trip "${tripName}" created successfully! Navigating to Itinerary...`);
-                    navigate('/itinerary');
-                  }}
+                  onClick={handleSaveTrip}
                 >
                   <CheckCircle2 size={18} /> Save & Launch Trip
                 </button>

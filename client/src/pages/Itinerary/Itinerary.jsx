@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Calendar, Users, Share2, CheckCircle, Edit2, GripVertical, Plus, Train, MapPin, Ticket } from 'lucide-react';
+import { Calendar, Users, Share2, CheckCircle, Edit2, GripVertical, Plus, Train, MapPin, Ticket, X, Sparkles } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
-import { itineraryData } from '../../data/mockData';
+import { useTrips } from '../../context/TripContext';
+import { itineraryData as defaultItinerary } from '../../data/mockData';
 import './Itinerary.css';
 
 const categoryColors = {
@@ -24,57 +25,181 @@ const statusDots = {
 };
 
 export default function Itinerary() {
-  const [activeStop, setActiveStop] = useState(0);
-  const [activeDay, setActiveDay] = useState(0);
-  const data = itineraryData;
-  const currentStop = data.stops[activeStop];
-  const displayDays = activeStop === 0 ? data.days : [
-    { day: 1, date: currentStop.startDate.split(' ')[1] || '1', weekday: '...', selected: true }
+  const { trips, activeTripId, setActiveTripId, addStopToTrip, addActivityToTrip, updateTrip } = useTrips();
+  
+  const [activeStopIndex, setActiveStopIndex] = useState(0);
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+
+  // New Stop Modal State
+  const [showAddStopModal, setShowAddStopModal] = useState(false);
+  const [newStopName, setNewStopName] = useState('');
+
+  // New Activity Modal State
+  const [showAddActivityModal, setShowAddActivityModal] = useState(false);
+  const [activityName, setActivityName] = useState('');
+  const [activityCategory, setActivityCategory] = useState('Culture');
+  const [activityTime, setActivityTime] = useState('10:00');
+  const [activityDuration, setActivityDuration] = useState('2h 00m');
+  const [activityCost, setActivityCost] = useState('₹1,500');
+  const [activityDesc, setActivityDesc] = useState('');
+
+  // Current selected trip
+  const activeTrip = trips.find(t => String(t.id) === String(activeTripId)) || trips[0];
+  const isFinalized = activeTrip?.status === 'completed';
+  
+  // Format trip stops
+  const rawStops = activeTrip?.stops || defaultItinerary.stops;
+  const stops = rawStops.map((s, idx) => {
+    if (typeof s === 'string') {
+      return {
+        id: idx + 1,
+        city: s,
+        startDate: activeTrip?.startDate || 'Oct 12',
+        endDate: activeTrip?.endDate || 'Oct 28',
+        nights: 3,
+        tags: ['CULTURE'],
+        imageQuery: `${s} landscape landmark`,
+        activities: idx === 0 ? defaultItinerary.activities : []
+      };
+    }
+    return s;
+  });
+
+  const safeStopIndex = Math.min(activeStopIndex, Math.max(0, stops.length - 1));
+  const currentStop = stops[safeStopIndex] || stops[0] || defaultItinerary.stops[0];
+
+  const activities = currentStop?.activities || [];
+
+  // Generate days based on stop
+  const displayDays = [
+    { day: 1, date: '12', weekday: 'Sat' },
+    { day: 2, date: '13', weekday: 'Sun' },
+    { day: 3, date: '14', weekday: 'Mon' },
   ];
-  const displayActivities = activeStop === 0 ? data.activities : [];
+
+  const handleAddStopSubmit = (e) => {
+    e.preventDefault();
+    if (!newStopName.trim()) return;
+    addStopToTrip(activeTrip.id, newStopName.trim());
+    setNewStopName('');
+    setShowAddStopModal(false);
+    setActiveStopIndex(stops.length);
+  };
+
+  const handleAddActivitySubmit = (e) => {
+    e.preventDefault();
+    if (!activityName.trim()) return;
+
+    const newActivity = {
+      name: activityName.trim(),
+      category: activityCategory,
+      time: activityTime || '10:00',
+      duration: activityDuration || '1h 30m',
+      cost: activityCost.startsWith('₹') ? activityCost : `₹${activityCost}`,
+      description: activityDesc || 'Custom planned activity.',
+      imageQuery: `${activityName.trim()} ${currentStop.city}`,
+      status: 'planned'
+    };
+
+    addActivityToTrip(activeTrip.id, safeStopIndex, newActivity);
+    setActivityName('');
+    setActivityDesc('');
+    setShowAddActivityModal(false);
+  };
+
+  const handleShare = () => {
+    navigator.clipboard?.writeText?.(window.location.href);
+    alert(`🔗 Itinerary link for "${activeTrip?.name || 'Your Trip'}" copied to clipboard!`);
+  };
+
+  const handleFinalize = () => {
+    if (activeTrip) {
+      const newStatus = isFinalized ? 'planning' : 'completed';
+      updateTrip({ ...activeTrip, status: newStatus });
+      if (!isFinalized) {
+        alert(`🎉 "${activeTrip.name}" is now finalized and marked as completed!`);
+      } else {
+        alert(`ℹ️ "${activeTrip.name}" status updated to planning.`);
+      }
+    }
+  };
 
   return (
     <div className="itinerary-page">
+      {/* Top Header */}
       <div className="itinerary-top">
         <div>
-          <h1>{data.tripName}</h1>
-          <div className="trip-meta">
-            <span><Calendar size={14} /> {data.startDate} - {data.endDate}</span>
-            <span>•</span>
-            <span><Users size={14} /> {data.travelers} Travelers</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)', background: 'var(--color-primary-50)', padding: '2px 10px', borderRadius: '12px', border: '1px solid var(--color-primary-light)' }}>
+              Active Trip
+            </span>
+            {trips.length > 1 && (
+              <select
+                value={activeTrip?.id}
+                onChange={(e) => { setActiveTripId(e.target.value); setActiveStopIndex(0); }}
+                style={{ fontSize: '13px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--color-gray-300)', background: 'var(--color-white)', color: 'var(--color-gray-800)', cursor: 'pointer' }}
+              >
+                {trips.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
           </div>
+          <h1>{activeTrip?.name || defaultItinerary.tripName}</h1>
+          <div className="trip-meta">
+            <span><Calendar size={14} /> {activeTrip?.startDate || defaultItinerary.startDate} - {activeTrip?.endDate || defaultItinerary.endDate}</span>
+            <span>•</span>
+            <span><Users size={14} /> {activeTrip?.travelers || 2} Travelers</span>
+            <span>•</span>
+            <span style={{ color: isFinalized ? 'var(--color-success)' : 'var(--color-primary)', fontWeight: '600', textTransform: 'capitalize' }}>
+              Status: {activeTrip?.status || 'Planning'}
+            </span>
+          </div>
+          {isFinalized && (
+            <div style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '10px 16px', borderRadius: '10px', marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500' }}>
+              <CheckCircle size={16} />
+              <span>This trip is finalized and marked as completed. You can view or modify its details anytime!</span>
+            </div>
+          )}
         </div>
         <div className="itinerary-actions">
-          <button className="btn btn-secondary"><Share2 size={16} /> Share</button>
-          <button className="btn btn-primary"><CheckCircle size={16} /> Finalize Trip</button>
+          <button className="btn btn-secondary" onClick={handleShare}><Share2 size={16} /> Share</button>
+          <button
+            className={`btn ${isFinalized ? 'btn-success' : 'btn-primary'}`}
+            onClick={handleFinalize}
+            style={isFinalized ? { background: '#10b981', borderColor: '#10b981', color: '#ffffff' } : {}}
+            title={isFinalized ? 'Click to reopen trip planning' : 'Finalize trip'}
+          >
+            <CheckCircle size={16} />
+            {isFinalized ? 'Trip Finalized' : 'Finalize Trip'}
+          </button>
         </div>
       </div>
 
       <div className="itinerary-content">
-        {/* Route Overview */}
+        {/* Left Panel: Route Overview */}
         <div className="route-overview">
           <div className="route-header">
-            <h2>Route Overview</h2>
-            <button><Edit2 size={14} /> Edit</button>
+            <h2>Route Overview ({stops.length} Stops)</h2>
           </div>
 
           <div className="route-timeline">
-            {data.stops.map((stop, i) => (
-              <div key={stop.id}>
+            {stops.map((stop, i) => (
+              <div key={stop.id || i}>
                 <div
-                  className={`route-stop${activeStop === i ? ' active' : ''}`}
-                  onClick={() => setActiveStop(i)}
+                  className={`route-stop${safeStopIndex === i ? ' active' : ''}`}
+                  onClick={() => setActiveStopIndex(i)}
                 >
                   <div className="route-dot" />
                   <div className="stop-card">
                     <div className="stop-card-header">
                       <div>
                         <h3>{stop.city}</h3>
-                        <div className="stop-dates">{stop.startDate} - {stop.endDate} • {stop.nights} Nights</div>
+                        <div className="stop-dates">{stop.startDate || 'Day 1'} - {stop.endDate || 'Day 3'} • {stop.nights || 3} Nights</div>
                       </div>
                       <GripVertical size={16} style={{ color: 'var(--color-gray-300)' }} />
                     </div>
-                    {stop.tags.length > 0 && (
+                    {stop.tags && stop.tags.length > 0 && (
                       <div className="stop-tags">
                         {stop.tags.map(t => <span key={t} className="tag">{t}</span>)}
                       </div>
@@ -90,21 +215,21 @@ export default function Itinerary() {
             ))}
           </div>
 
-          <button className="add-dest-btn" onClick={() => prompt('Enter new destination name:')}>
+          <button className="add-dest-btn" onClick={() => setShowAddStopModal(true)}>
             <Plus size={16} /> Add Destination
           </button>
         </div>
 
-        {/* Detail Panel */}
+        {/* Right Panel: Active Stop Details */}
         <div className="itinerary-detail">
           {/* City Hero */}
           <div className="city-hero">
-            <PexelsImage query={currentStop.imageQuery} alt={currentStop.city} size="large" />
+            <PexelsImage query={currentStop.imageQuery || `${currentStop.city} landmark`} alt={currentStop.city} size="large" />
             <div className="city-hero-overlay" />
             <div className="city-hero-content">
-              <div className="city-hero-meta">Trip Dates</div>
+              <div className="city-hero-meta">Active Destination</div>
               <h2>{currentStop.city}</h2>
-              <div className="city-hero-dates">{currentStop.startDate} - {currentStop.endDate}</div>
+              <div className="city-hero-dates">{currentStop.startDate || 'Oct 12'} - {currentStop.endDate || 'Oct 17'}</div>
             </div>
           </div>
 
@@ -113,8 +238,8 @@ export default function Itinerary() {
             {displayDays.map((d, i) => (
               <button
                 key={i}
-                className={`day-tab${activeDay === i ? ' active' : ''}`}
-                onClick={() => setActiveDay(i)}
+                className={`day-tab${activeDayIndex === i ? ' active' : ''}`}
+                onClick={() => setActiveDayIndex(i)}
               >
                 <div className="day-label">DAY {d.day}</div>
                 <div className="day-date">{d.date}</div>
@@ -123,10 +248,19 @@ export default function Itinerary() {
             ))}
           </div>
 
-          {/* Activities */}
+          {/* Activity List & Add Action */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-gray-900)' }}>
+              Activities in {currentStop.city}
+            </h3>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowAddActivityModal(true)}>
+              <Plus size={14} /> Add Activity
+            </button>
+          </div>
+
           <div className="activity-list">
-            {displayActivities.length > 0 ? (
-              displayActivities.map(act => (
+            {activities.length > 0 ? (
+              activities.map(act => (
                 <div key={act.id} className="activity-card">
                   <div className="activity-time">
                     <div className="time">
@@ -136,16 +270,16 @@ export default function Itinerary() {
                     <div className="duration">{act.duration}</div>
                   </div>
                   <div className="activity-thumb">
-                    <PexelsImage query={act.imageQuery} alt={act.name} size="small" />
+                    <PexelsImage query={act.imageQuery || act.name} alt={act.name} size="small" />
                   </div>
                   <div className="activity-info">
                     <h4>{act.name}</h4>
                     <p>{act.description}</p>
                     <div className="activity-tags">
                       <span className={`category-tag ${categoryColors[act.category] || ''}`}>
-                        {categoryIcons[act.category]} {act.category}
+                        {categoryIcons[act.category] || '✨'} {act.category}
                       </span>
-                      {act.cost && <span className="tag">$ {act.cost}</span>}
+                      {act.cost && <span className="tag">{act.cost.startsWith('₹') || act.cost === 'Free' ? act.cost : `₹ ${act.cost}`}</span>}
                       {act.tags && act.tags.map(t => (
                         <span key={t} className="tag"><Ticket size={10} /> {t}</span>
                       ))}
@@ -154,14 +288,137 @@ export default function Itinerary() {
                 </div>
               ))
             ) : (
-              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-gray-500)' }}>
-                <p>No activities planned for {currentStop.city} yet.</p>
-                <button className="btn btn-secondary" style={{ marginTop: '1rem' }} onClick={() => prompt('Add an activity for this destination:')}>+ Add Activity</button>
+              <div style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--color-white)', borderRadius: '16px', border: '1px dashed var(--color-gray-300)' }}>
+                <Sparkles size={24} style={{ color: 'var(--color-primary)', marginBottom: '8px' }} />
+                <p style={{ color: 'var(--color-gray-600)', fontSize: '15px', fontWeight: '500' }}>No activities planned for {currentStop.city} yet.</p>
+                <p style={{ color: 'var(--color-gray-400)', fontSize: '13px', marginBottom: '16px' }}>Start customizing your itinerary by adding experiences.</p>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowAddActivityModal(true)}>
+                  <Plus size={14} /> Add First Activity
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Add Stop Modal */}
+      {showAddStopModal && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="modal-card" style={{ background: '#ffffff', width: '90%', maxWidth: '420px', borderRadius: '16px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Add New Destination Stop</h3>
+              <button onClick={() => setShowAddStopModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleAddStopSubmit}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Destination / City Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Venice, Rome, Kyoto..."
+                  value={newStopName}
+                  onChange={(e) => setNewStopName(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddStopModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Add Stop</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Activity Modal */}
+      {showAddActivityModal && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="modal-card" style={{ background: '#ffffff', width: '90%', maxWidth: '480px', borderRadius: '16px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Add Activity for {currentStop.city}</h3>
+              <button onClick={() => setShowAddActivityModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleAddActivitySubmit}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Activity Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Museum Tour, Sunset Cruise, Cooking Class..."
+                  value={activityName}
+                  onChange={(e) => setActivityName(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Category</label>
+                  <select
+                    value={activityCategory}
+                    onChange={(e) => setActivityCategory(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', background: '#fff' }}
+                  >
+                    <option value="Culture">Culture</option>
+                    <option value="Food">Food</option>
+                    <option value="Nature">Nature</option>
+                    <option value="Adventure">Adventure</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Estimated Cost (₹)</label>
+                  <input
+                    type="text"
+                    placeholder="₹1,500"
+                    value={activityCost}
+                    onChange={(e) => setActivityCost(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Time</label>
+                  <input
+                    type="text"
+                    placeholder="10:00 AM"
+                    value={activityTime}
+                    onChange={(e) => setActivityTime(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Duration</label>
+                  <input
+                    type="text"
+                    placeholder="2h 00m"
+                    value={activityDuration}
+                    onChange={(e) => setActivityDuration(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Description</label>
+                <textarea
+                  placeholder="Details about booking, venue, or schedule..."
+                  value={activityDesc}
+                  onChange={(e) => setActivityDesc(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', height: '70px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddActivityModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Add Activity</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

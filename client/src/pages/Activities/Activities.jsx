@@ -104,7 +104,7 @@ export default function Activities() {
             <div className="budget-ring-row">
               <div>
                 <div className="budget-ring-label">Budget Used</div>
-                <div className="budget-ring-value">$1,240 / $3,000</div>
+                <div className="budget-ring-value">₹99,200 / ₹2,40,000</div>
               </div>
               <div className="budget-ring-circle" />
             </div>

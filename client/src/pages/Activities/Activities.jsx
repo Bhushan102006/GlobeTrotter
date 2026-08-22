@@ -1,7 +1,15 @@
 import { Search, Sparkles, ChevronDown, Clock, MapPin, Grid3X3, List, Trash2 } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
-import { activities } from '../../data/mockData';
 import './Activities.css';
+
+const activities = [
+  { id: 1, name: 'Private Tuscan Villa Cooking Masterclass', category: 'Food & Wine', match: 98, duration: '4 Hours', cost: '₹8,500', location: 'Chianti Region', imageQuery: 'tuscan cooking class villa', featured: true },
+  { id: 2, name: 'Path of the Gods Sunrise Hike', category: 'Adventure', duration: '5 Hrs', cost: '₹4,200', imageQuery: 'amalfi coast hiking trail sunrise', featured: true },
+  { id: 3, name: 'Traditional Maiolica Pottery Workshop', category: 'Culture', duration: '2h', cost: 6800, costLabel: '₹6,800 / person', description: 'Learn ancient ceramic techniques from a local artisan in Florence.', imageQuery: 'italian pottery workshop florence' },
+  { id: 4, name: 'Vintage Vespa City Tour', category: 'Sightseeing', duration: '3h', cost: 9600, costLabel: '₹9,600 / person', description: 'Zip through hidden alleys and iconic piazzas like a true local.', imageQuery: 'vespa tour rome italy' },
+  { id: 5, name: 'Bologna Secret Food Tour', category: 'Food & Wine', duration: '3.5h', cost: 7600, costLabel: '₹7,600 / person', description: "Taste your way through the culinary capital's historic markets.", imageQuery: 'bologna food market italy' },
+];
+
 
 export default function Activities() {
   const featured = activities.filter(a => a.featured);

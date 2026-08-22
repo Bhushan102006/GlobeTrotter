@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Calendar, Users, Share2, CheckCircle, Edit2, GripVertical, Plus, Train, MapPin, Ticket, X, Sparkles } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
 import { useTrips } from '../../context/TripContext';
-import { itineraryData as defaultItinerary } from '../../data/mockData';
 import './Itinerary.css';
 
 const categoryColors = {
@@ -43,31 +42,20 @@ export default function Itinerary() {
   const [activityCost, setActivityCost] = useState('₹1,500');
   const [activityDesc, setActivityDesc] = useState('');
 
-  // Current selected trip
   const activeTrip = trips.find(t => String(t.id) === String(activeTripId)) || trips[0];
   const isFinalized = activeTrip?.status === 'completed';
   
-  // Format trip stops
-  const rawStops = activeTrip?.stops || defaultItinerary.stops;
+  // Format trip stops - support both API objects and simple strings
+  const rawStops = activeTrip?.stops || [];
   const stops = rawStops.map((s, idx) => {
     if (typeof s === 'string') {
-      return {
-        id: idx + 1,
-        city: s,
-        startDate: activeTrip?.startDate || 'Oct 12',
-        endDate: activeTrip?.endDate || 'Oct 28',
-        nights: 3,
-        tags: ['CULTURE'],
-        imageQuery: `${s} landscape landmark`,
-        activities: idx === 0 ? defaultItinerary.activities : []
-      };
+      return { id: idx + 1, city: s, startDate: activeTrip?.startDate, endDate: activeTrip?.endDate, nights: 3, tags: ['CULTURE'], imageQuery: `${s} landscape landmark`, activities: [] };
     }
-    return s;
+    return { ...s, activities: s.activities || [] };
   });
 
   const safeStopIndex = Math.min(activeStopIndex, Math.max(0, stops.length - 1));
-  const currentStop = stops[safeStopIndex] || stops[0] || defaultItinerary.stops[0];
-
+  const currentStop = stops[safeStopIndex] || { city: 'Destination', activities: [] };
   const activities = currentStop?.activities || [];
 
   // Generate days based on stop
@@ -112,15 +100,10 @@ export default function Itinerary() {
     alert(`🔗 Itinerary link for "${activeTrip?.name || 'Your Trip'}" copied to clipboard!`);
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (activeTrip) {
       const newStatus = isFinalized ? 'planning' : 'completed';
-      updateTrip({ ...activeTrip, status: newStatus });
-      if (!isFinalized) {
-        alert(`🎉 "${activeTrip.name}" is now finalized and marked as completed!`);
-      } else {
-        alert(`ℹ️ "${activeTrip.name}" status updated to planning.`);
-      }
+      await updateTrip({ ...activeTrip, status: newStatus });
     }
   };
 
@@ -145,9 +128,9 @@ export default function Itinerary() {
               </select>
             )}
           </div>
-          <h1>{activeTrip?.name || defaultItinerary.tripName}</h1>
+          <h1>{activeTrip?.name || 'My Trip'}</h1>
           <div className="trip-meta">
-            <span><Calendar size={14} /> {activeTrip?.startDate || defaultItinerary.startDate} - {activeTrip?.endDate || defaultItinerary.endDate}</span>
+            <span><Calendar size={14} /> {activeTrip?.startDate || 'TBD'} - {activeTrip?.endDate || 'TBD'}</span>
             <span>•</span>
             <span><Users size={14} /> {activeTrip?.travelers || 2} Travelers</span>
             <span>•</span>

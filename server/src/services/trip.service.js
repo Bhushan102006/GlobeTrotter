@@ -287,6 +287,17 @@ async function deleteActivityFromTrip(userId, tripId, activityId) {
   return normalizeTrip(trip);
 }
 
+async function getTripStats(userId) {
+  const trips = await Trip.find({ userId }).select('status');
+  const stats = { total: trips.length, upcoming: 0, planning: 0, completed: 0 };
+  trips.forEach((t) => {
+    if (t.status === 'upcoming') stats.upcoming++;
+    else if (t.status === 'planning') stats.planning++;
+    else if (t.status === 'completed') stats.completed++;
+  });
+  return stats;
+}
+
 module.exports = {
   createTrip,
   getTripsByUser,
@@ -299,4 +310,5 @@ module.exports = {
   addActivityToTrip,
   updateActivityInTrip,
   deleteActivityFromTrip,
+  getTripStats,
 };

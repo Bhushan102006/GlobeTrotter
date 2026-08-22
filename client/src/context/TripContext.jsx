@@ -1,144 +1,120 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { trips as initialTrips, itineraryData } from '../data/mockData';
+import { tripApi } from '../services/api';
 
 const TripContext = createContext();
 
 export function TripProvider({ children }) {
-  const [trips, setTrips] = useState(() => {
-    try {
-      const saved = localStorage.getItem('globetrotter_trips');
-      return saved ? JSON.parse(saved) : initialTrips;
-    } catch (e) {
-      console.error('Failed to load trips from localStorage', e);
-      return initialTrips;
-    }
-  });
+  const [trips, setTrips] = useState([]);
+  const [activeTripId, setActiveTripId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [activeTripId, setActiveTripId] = useState(() => {
-    return trips.length > 0 ? trips[0].id : null;
-  });
-
+  // Load trips from API on mount; fall back to localStorage if offline
   useEffect(() => {
-    try {
-      localStorage.setItem('globetrotter_trips', JSON.stringify(trips));
-    } catch (e) {
-      console.error('Failed to save trips to localStorage', e);
-    }
-  }, [trips]);
+    const load = async () => {
+      try {
+        const res = await tripApi.list();
+        const apiTrips = Array.isArray(res.response) ? res.response : [];
+        setTrips(apiTrips);
+        if (apiTrips.length > 0 && !activeTripId) {
+          setActiveTripId(String(apiTrips[0].id));
+        }
+      } catch {
+        // Offline fallback
+        try {
+          const saved = localStorage.getItem('globetrotter_trips');
+          const local = saved ? JSON.parse(saved) : [];
+          setTrips(local);
+          if (local.length > 0 && !activeTripId) {
+            setActiveTripId(String(local[0].id));
+          }
+        } catch { /* ignore */ }
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Persist trips to localStorage as backup cache
+  useEffect(() => {
+    if (!loading) {
+      try {
+        localStorage.setItem('globetrotter_trips', JSON.stringify(trips));
+      } catch { /* ignore */ }
+    }
+  }, [trips, loading]);
+
+  // ── Add Trip ──────────────────────────────────────────────────
   const addTrip = (newTrip) => {
-    // Standardize trip object structure with stops and activities
     const fullTrip = {
       ...newTrip,
-      stops: newTrip.stops && typeof newTrip.stops[0] === 'object'
-        ? newTrip.stops
-        : (newTrip.stops || ['Main Destination']).map((s, i) => ({
-            id: i + 1,
-            city: typeof s === 'string' ? s : s.city || 'Destination',
-            startDate: newTrip.startDate || 'Oct 12',
-            endDate: newTrip.endDate || 'Oct 28',
-            nights: 3,
-            tags: ['CULTURE', 'FOOD'],
-            imageQuery: `${typeof s === 'string' ? s : s.city} landmark landscape`,
-            active: i === 0,
-            activities: i === 0 ? [
-              {
-                id: Date.now() + 1,
-                time: '10:00',
-                duration: '2h 00m',
-                name: `Explore ${typeof s === 'string' ? s : s.city} Highlights`,
-                description: `Guided walking tour through historic streets and cultural landmarks.`,
-                category: 'Culture',
-                cost: '₹2,500',
-                imageQuery: `${typeof s === 'string' ? s : s.city} city street`,
-                status: 'confirmed',
-              },
-              {
-                id: Date.now() + 2,
-                time: '13:00',
-                duration: '1h 30m',
-                name: 'Local Food Tasting & Market Tour',
-                description: 'Taste authentic local delicacies and fresh produce.',
-                category: 'Food',
-                cost: '₹1,800',
-                imageQuery: 'local food market dish',
-                status: 'planned',
-              }
-            ] : []
-          }))
+      stops: (newTrip.stops || []).map((s, i) =>
+        typeof s === 'string'
+          ? { id: i + 1, city: s, startDate: newTrip.startDate, endDate: newTrip.endDate, nights: 3, tags: [], imageQuery: `${s} landmark`, activities: [] }
+          : s
+      ),
     };
-
     setTrips(prev => [fullTrip, ...prev]);
-    setActiveTripId(fullTrip.id);
+    setActiveTripId(String(fullTrip.id));
   };
 
-  const updateTrip = (updatedTrip) => {
+  // ── Update Trip (local + API) ─────────────────────────────────
+  const updateTrip = async (updatedTrip) => {
     setTrips(prev => prev.map(t => String(t.id) === String(updatedTrip.id) ? updatedTrip : t));
+    try {
+      await tripApi.update(String(updatedTrip.id), updatedTrip);
+    } catch { /* silent: local state already updated */ }
   };
 
-  const addStopToTrip = (tripId, stopName) => {
-    setTrips(prev => prev.map(t => {
-      if (String(t.id) !== String(tripId)) return t;
-      const currentStops = t.stops || [];
-      const newStop = {
-        id: Date.now(),
-        city: stopName,
-        startDate: t.startDate || 'Day 1',
-        endDate: t.endDate || 'Day 3',
-        nights: 3,
-        tags: ['NEW'],
-        imageQuery: `${stopName} travel destination`,
-        activities: [
-          {
-            id: Date.now() + 10,
-            time: '10:00',
-            duration: '2h 00m',
-            name: `Sightseeing in ${stopName}`,
-            description: `Visit iconic places in ${stopName}.`,
-            category: 'Adventure',
-            cost: '₹2,000',
-            imageQuery: `${stopName} landscape`,
-            status: 'planned',
-          }
-        ]
-      };
-      return {
-        ...t,
-        destinations: (t.destinations || 0) + 1,
-        stops: [...currentStops, newStop]
-      };
-    }));
+  // ── Add Stop ─────────────────────────────────────────────────
+  const addStopToTrip = async (tripId, stopName) => {
+    try {
+      const res = await tripApi.addStop(String(tripId), { city: stopName, country: '', notes: '' });
+      setTrips(prev => prev.map(t => String(t.id) === String(tripId) ? res.response : t));
+    } catch {
+      // Offline fallback
+      setTrips(prev => prev.map(t => {
+        if (String(t.id) !== String(tripId)) return t;
+        const newStop = { id: Date.now(), city: stopName, startDate: t.startDate, endDate: t.endDate, nights: 3, tags: [], imageQuery: `${stopName} landmark`, activities: [] };
+        return { ...t, stops: [...(t.stops || []), newStop] };
+      }));
+    }
   };
 
-  const addActivityToTrip = (tripId, stopIndex, activity) => {
-    setTrips(prev => prev.map(t => {
-      if (String(t.id) !== String(tripId)) return t;
-      const updatedStops = (t.stops || []).map((stop, idx) => {
-        if (idx !== stopIndex) return stop;
-        const currentActivities = stop.activities || [];
-        return {
-          ...stop,
-          activities: [...currentActivities, { id: Date.now(), ...activity }]
-        };
-      });
-      return { ...t, stops: updatedStops };
-    }));
+  // ── Add Activity ─────────────────────────────────────────────
+  const addActivityToTrip = async (tripId, stopIndex, activity) => {
+    try {
+      const payload = {
+        title: activity.name || activity.title,
+        category: activity.category || 'General',
+        date: activity.date || null,
+        time: activity.time || '',
+        duration: activity.duration || '',
+        cost: activity.cost ? parseFloat(String(activity.cost).replace(/[₹,]/g, '')) || 0 : 0,
+        description: activity.description || '',
+        status: 'planned',
+      };
+      const res = await tripApi.addActivity(String(tripId), payload);
+      setTrips(prev => prev.map(t => String(t.id) === String(tripId) ? res.response : t));
+    } catch {
+      // Offline fallback
+      setTrips(prev => prev.map(t => {
+        if (String(t.id) !== String(tripId)) return t;
+        const updatedStops = (t.stops || []).map((stop, idx) => {
+          if (idx !== stopIndex) return stop;
+          return { ...stop, activities: [...(stop.activities || []), { id: Date.now(), ...activity }] };
+        });
+        return { ...t, stops: updatedStops };
+      }));
+    }
   };
 
   return (
-    <TripContext.Provider value={{
-      trips,
-      activeTripId,
-      setActiveTripId,
-      addTrip,
-      updateTrip,
-      addStopToTrip,
-      addActivityToTrip
-    }}>
+    <TripContext.Provider value={{ trips, activeTripId, setActiveTripId, addTrip, updateTrip, addStopToTrip, addActivityToTrip, loading }}>
       {children}
     </TripContext.Provider>
   );
 }
 
 export const useTrips = () => useContext(TripContext);
-

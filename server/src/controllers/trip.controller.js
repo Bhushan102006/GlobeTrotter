@@ -109,6 +109,15 @@ async function deleteActivityController(req, res) {
   });
 }
 
+async function getTripStatsController(req, res) {
+  const stats = await tripService.getTripStats(req.user.id);
+  return res.status(200).json({
+    status: 'success',
+    message: 'Trip stats fetched successfully',
+    response: stats,
+  });
+}
+
 module.exports = {
   createTripController,
   getTripsController,
@@ -121,4 +130,5 @@ module.exports = {
   addActivityController,
   updateActivityController,
   deleteActivityController,
+  getTripStatsController,
 };

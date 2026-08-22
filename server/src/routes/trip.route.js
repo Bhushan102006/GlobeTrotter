@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+router.get('/stats', asyncHandler(tripController.getTripStatsController));
 router.get('/', asyncHandler(tripController.getTripsController));
 router.post('/', asyncHandler(tripController.createTripController));
 router.get('/:tripId', asyncHandler(tripController.getTripController));

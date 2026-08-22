@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Download, Plus, Calendar as CalIcon, AlertTriangle, Clock, X } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
-import { budgetData } from '../../data/mockData';
+import { useTrips } from '../../context/TripContext';
+import { tripApi } from '../../services/api';
 import './Budget.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler);
@@ -17,12 +18,44 @@ const categoryIconMap = {
 const expenseIcons = { plane: '✈️', hotel: '🏨', utensils: '🍽', activity: '🎟' };
 
 export default function Budget() {
-  const bd = budgetData;
+  const { trips, activeTripId } = useTrips();
+  const activeTrip = trips.find(t => String(t.id) === String(activeTripId)) || trips[0];
 
-  const [categories, setCategories] = useState(bd.categories);
-  const [totalEstimated, setTotalEstimated] = useState(bd.totalEstimated);
-  const [topExpenses, setTopExpenses] = useState(bd.topExpenses || []);
-  const [dailySpending, setDailySpending] = useState(bd.dailySpending);
+  const CATEGORY_COLORS = ['#2563eb', '#94a3b8', '#ec4899', '#f97316', '#10b981', '#8b5cf6'];
+
+  // Derive categories from trip activities or use defaults
+  const deriveCategories = (trip) => {
+    if (!trip) return [
+      { name: 'Flights', amount: 0, color: '#2563eb' },
+      { name: 'Accommodation', amount: 0, color: '#94a3b8' },
+      { name: 'Meals', amount: 0, color: '#ec4899' },
+      { name: 'Activities', amount: 0, color: '#f97316' },
+    ];
+    const catMap = {};
+    (trip.activities || []).forEach(act => {
+      const cat = act.category || 'Activities';
+      catMap[cat] = (catMap[cat] || 0) + (act.cost || 0);
+    });
+    const cats = Object.entries(catMap).map(([name, amount], i) => ({ name, amount, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }));
+    if (cats.length === 0) return [
+      { name: 'Flights', amount: Math.round((trip.budget || 0) * 0.25), color: '#2563eb' },
+      { name: 'Accommodation', amount: Math.round((trip.budget || 0) * 0.35), color: '#94a3b8' },
+      { name: 'Meals', amount: Math.round((trip.budget || 0) * 0.25), color: '#ec4899' },
+      { name: 'Activities', amount: Math.round((trip.budget || 0) * 0.15), color: '#f97316' },
+    ];
+    return cats;
+  };
+
+  const [categories, setCategories] = useState(() => deriveCategories(activeTrip));
+  const [totalEstimated, setTotalEstimated] = useState(() => activeTrip?.budget || 0);
+  const [topExpenses, setTopExpenses] = useState([]);
+  const [dailySpending, setDailySpending] = useState([]);
+
+  // Sync when active trip changes
+  useEffect(() => {
+    setCategories(deriveCategories(activeTrip));
+    setTotalEstimated(activeTrip?.budget || 0);
+  }, [activeTripId, trips]);
 
   // View mode state (chart | list)
   const [viewMode, setViewMode] = useState('chart');
@@ -34,11 +67,19 @@ export default function Budget() {
   const [expenseCategory, setExpenseCategory] = useState('Activities');
   const [expenseDetail, setExpenseDetail] = useState('');
 
-  const targetBudget = bd.targetBudget;
+  const targetBudget = activeTrip?.budget || 0;
+  const spentSoFar = activeTrip?.spent || 0;
   const overBudget = Math.max(0, totalEstimated - targetBudget);
-  const averageDaily = Math.round(totalEstimated / bd.duration);
+  
+  let duration = 14;
+  if (activeTrip?.startDate && activeTrip?.endDate) {
+    const diff = Math.ceil((new Date(activeTrip.endDate) - new Date(activeTrip.startDate)) / (1000 * 60 * 60 * 24));
+    if (!isNaN(diff) && diff > 0) duration = diff;
+  }
+  
+  const averageDaily = Math.round(totalEstimated / duration);
 
-  const handleAddExpenseSubmit = (e) => {
+  const handleAddExpenseSubmit = async (e) => {
     e.preventDefault();
     const numAmount = parseFloat(expenseAmount.toString().replace(/[^0-9.]/g, ''));
     if (!expenseTitle.trim() || isNaN(numAmount) || numAmount <= 0) return;
@@ -106,7 +147,7 @@ export default function Budget() {
       },
       {
         label: 'Target',
-        data: dailySpending.map(() => bd.targetDaily),
+        data: dailySpending.map(() => Math.round(targetBudget / duration)),
         borderColor: '#94a3b8',
         borderDash: [6, 4],
         borderWidth: 1.5,
@@ -148,7 +189,7 @@ export default function Budget() {
         <div className="budget-header-inner">
           <div>
             <h1>Budget Breakdown</h1>
-            <div className="budget-trip-info">{bd.tripName} · {bd.duration} Days · {bd.travelers} Travelers</div>
+            <div className="budget-trip-info">{activeTrip?.name || 'My Trip'} · {duration} Days · {activeTrip?.travelers || 2} Travelers</div>
           </div>
           <div className="budget-header-actions">
             <button className="btn btn-secondary" onClick={() => window.print()}><Download size={16} /> Export PDF</button>
@@ -258,7 +299,7 @@ export default function Budget() {
           <div className="chart-header">
             <div>
               <h3>Daily Spending Trend</h3>
-              <div className="target-info">Target daily budget: ₹{bd.targetDaily.toLocaleString()}</div>
+              <div className="target-info">Target daily budget: ₹{Math.round(targetBudget / duration).toLocaleString()}</div>
             </div>
             <div style={{ display: 'flex', gap: 16, fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 16, height: 2, background: '#2563EB', display: 'inline-block' }} /> Actual</span>
@@ -274,23 +315,27 @@ export default function Budget() {
         <div className="budget-bottom-row">
           <div className="alert-section">
             <h3>Attention Needed</h3>
-            {bd.alerts.map((alert, i) => (
-              <div key={i} className={`alert-card ${alert.type === 'over-budget' ? 'over-budget' : 'upcoming'}`}>
-                <div className="alert-card-header">
-                  <span className="alert-type">
-                    {alert.type === 'over-budget' ? <><AlertTriangle size={14} /> {alert.title}</> : <><Clock size={14} /> {alert.title}</>}
-                  </span>
-                  <span className="alert-amount">{alert.amount}</span>
-                </div>
-                <div className="alert-desc">{alert.description}</div>
-                <div className="alert-detail">{alert.detail}</div>
-                {alert.actions && (
-                  <div className="alert-actions">
-                    {alert.actions.map(a => <button key={a}>{a}</button>)}
+            {(activeTrip?.alerts || []).length > 0 ? (
+              (activeTrip?.alerts || []).map((alert, i) => (
+                <div key={i} className={`alert-card ${alert.type === 'over-budget' ? 'over-budget' : 'upcoming'}`}>
+                  <div className="alert-card-header">
+                    <span className="alert-type">
+                      {alert.type === 'over-budget' ? <><AlertTriangle size={14} /> {alert.title}</> : <><Clock size={14} /> {alert.title}</>}
+                    </span>
+                    <span className="alert-amount">{alert.amount}</span>
                   </div>
-                )}
-              </div>
-            ))}
+                  <div className="alert-desc">{alert.description}</div>
+                  <div className="alert-detail">{alert.detail}</div>
+                  {alert.actions && (
+                    <div className="alert-actions">
+                      {alert.actions.map(a => <button key={a}>{a}</button>)}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p style={{ color: 'var(--color-gray-500)', fontSize: '14px' }}>Everything looks on track. No budget alerts right now.</p>
+            )}
           </div>
 
           <div className="top-expenses">

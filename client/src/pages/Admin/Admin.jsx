@@ -1,11 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, TrendingUp, DollarSign, AlertCircle, ArrowUpRight, MoreVertical, Download } from 'lucide-react';
-import { adminStats, adminUsers, popularCities, engagementHeatmap } from '../../data/mockData';
+import { tripApi } from '../../services/api';
 import './Admin.css';
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const popularCities = [
+  { name: 'NYC', value: 6200 },
+  { name: 'Paris', value: 5800 },
+  { name: 'Tokyo', value: 8200 },
+  { name: 'London', value: 5100 },
+  { name: 'Rome', value: 4800 },
+];
+
+const engagementHeatmap = [
+  [3, 7, 6, 4, 3, 2, 1],
+  [2, 5, 8, 3, 6, 4, 2],
+  [4, 6, 5, 7, 4, 8, 7],
+];
+
 export default function Admin() {
+  const [tripStats, setTripStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    tripApi.getStats()
+      .then((res) => setTripStats(res.response))
+      .catch(() => setTripStats(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statCards = [
+    {
+      label: 'Total Trips',
+      value: loading ? '...' : (tripStats?.total ?? '—'),
+      change: tripStats ? `${tripStats.upcoming} upcoming` : '',
+      icon: <TrendingUp size={16} />,
+      trend: 'up',
+    },
+    {
+      label: 'Planning',
+      value: loading ? '...' : (tripStats?.planning ?? '—'),
+      change: 'In progress',
+      icon: <Users size={16} />,
+      trend: 'up',
+    },
+    {
+      label: 'Completed',
+      value: loading ? '...' : (tripStats?.completed ?? '—'),
+      change: 'Finished trips',
+      icon: <DollarSign size={16} />,
+      trend: 'up',
+    },
+    {
+      label: 'Open Reports',
+      value: '24',
+      change: 'Spam: 18  Other: 6',
+      icon: <AlertCircle size={16} />,
+      trend: 'neutral',
+    },
+  ];
+
   return (
     <div className="admin-page">
       <div className="admin-header">
@@ -25,50 +80,20 @@ export default function Admin() {
       <div className="admin-content">
         {/* Stat Cards */}
         <div className="stat-cards-grid">
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span>Active Trips</span>
-              <TrendingUp size={16} />
+          {statCards.map((card) => (
+            <div key={card.label} className="stat-card">
+              <div className="stat-card-header">
+                <span>{card.label}</span>
+                {card.icon}
+              </div>
+              <div className="stat-card-value">{card.value}</div>
+              <div className={`stat-card-trend ${card.trend}`}>
+                {card.trend === 'up' && <ArrowUpRight size={14} />} {card.change}
+              </div>
             </div>
-            <div className="stat-card-value">{adminStats.activeTrips.value}</div>
-            <div className="stat-card-trend up">
-              <ArrowUpRight size={14} /> {adminStats.activeTrips.change} this month
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span>New Users</span>
-              <Users size={16} />
-            </div>
-            <div className="stat-card-value">{adminStats.newUsers.value}</div>
-            <div className="stat-card-trend up">
-              <ArrowUpRight size={14} /> {adminStats.newUsers.change} this month
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span>Avg Trip Budget</span>
-              <DollarSign size={16} />
-            </div>
-            <div className="stat-card-value">{adminStats.avgBudget.value}</div>
-            <div className="stat-card-trend up">
-              <ArrowUpRight size={14} /> {adminStats.avgBudget.change} vs baseline
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span>Open Reports</span>
-              <AlertCircle size={16} />
-            </div>
-            <div className="stat-card-value">{adminStats.openReports.value}</div>
-            <div className="stat-card-trend neutral">
-              {adminStats.openReports.detail}
-            </div>
-          </div>
+          ))}
         </div>
+
 
         {/* Analytics Row */}
         <div className="analytics-grid-row">
@@ -139,7 +164,12 @@ export default function Admin() {
                 </tr>
               </thead>
               <tbody>
-                {adminUsers.map((u) => (
+                {[
+                  { id: 1, name: 'Sarah Jenkins', email: 'sarah.j@example.com', status: 'Active', role: 'Pro Explorer', lastActive: '2 mins ago' },
+                  { id: 2, name: 'Marcus Chen', email: 'marcus.c@example.com', status: 'Active', role: 'Basic', lastActive: '1 hour ago', initials: 'MC' },
+                  { id: 3, name: 'David Reynolds', email: 'david.r@example.com', status: 'Inactive', role: 'Basic', lastActive: '2 weeks ago' },
+                  { id: 4, name: 'System Admin', email: 'admin@globetrotter.io', status: 'Locked', role: 'Administrator', lastActive: 'Just now', initials: '⚠' },
+                ].map((u) => (
                   <tr key={u.id}>
                     <td>
                       <div className="user-cell">

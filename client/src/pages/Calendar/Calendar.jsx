@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar as CalIcon, Plus, GripVertical, ArrowDown, X, Sparkles } from 'lucide-react';
-import { calendarEvents as initialEvents, unscheduledActivities as initialUnscheduled } from '../../data/mockData';
+import { useTrips } from '../../context/TripContext';
+import { tripApi } from '../../services/api';
 import './Calendar.css';
 
 const defaultCategories = [
@@ -45,16 +46,49 @@ const weekFocusDays = [
 ];
 
 export default function CalendarPage() {
+  const { trips, activeTripId } = useTrips();
+  const activeTrip = trips.find(t => String(t.id) === String(activeTripId)) || trips[0];
+
   const [viewMode, setViewMode] = useState('month'); // 'month' | 'week'
   const [categories, setCategories] = useState(defaultCategories);
-  const [events, setEvents] = useState(initialEvents);
-  const [unscheduled, setUnscheduled] = useState(initialUnscheduled);
+
+  // Derive calendar events from trip activities
+  const deriveEvents = (trip) => {
+    if (!trip || !trip.activities) return [];
+    return trip.activities
+      .filter(act => act.date)
+      .map(act => {
+        const d = new Date(act.date);
+        const dateNum = isNaN(d) ? null : d.getDate();
+        if (!dateNum) return null;
+        const catRaw = (act.category || 'General').toLowerCase();
+        const catKey = catRaw.includes('transport') ? 'transport' :
+          catRaw.includes('accommodation') || catRaw.includes('lodging') ? 'accommodation' :
+          catRaw.includes('dine') || catRaw.includes('food') || catRaw.includes('meal') ? 'dining' :
+          catRaw.includes('nature') ? 'nature' : 'sightseeing';
+        return { id: act._id || act.id, date: dateNum, title: act.title || act.name, category: catKey };
+      })
+      .filter(Boolean);
+  };
+
+  const [events, setEvents] = useState(() => deriveEvents(activeTrip));
+  const [unscheduled, setUnscheduled] = useState(() => {
+    const scheduled = new Set((activeTrip?.activities || []).filter(a => a.date).map(a => a.title || a.name));
+    return (activeTrip?.activities || []).filter(a => !a.date).map(a => ({ id: a._id || a.id, name: a.title || a.name }));
+  });
+
+  // Sync events when active trip changes
+  useEffect(() => {
+    setEvents(deriveEvents(activeTrip));
+    setUnscheduled((activeTrip?.activities || []).filter(a => !a.date).map(a => ({ id: a._id || a.id, name: a.title || a.name })));
+  }, [activeTripId, trips]);
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
   const [activityTitle, setActivityTitle] = useState('');
   const [activityCategory, setActivityCategory] = useState('sightseeing');
   const [activityDate, setActivityDate] = useState(12);
+  const [saving, setSaving] = useState(false);
 
   const toggleCategory = (key) => {
     setCategories(prev => prev.map(c => c.key === key ? { ...c, checked: !c.checked } : c));
@@ -62,7 +96,7 @@ export default function CalendarPage() {
 
   const activeCategoryKeys = new Set(categories.filter(c => c.checked).map(c => c.key));
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!activityTitle.trim()) return;
 
@@ -74,10 +108,21 @@ export default function CalendarPage() {
     };
 
     setEvents(prev => [...prev, newEvent]);
-
-    // Remove from unscheduled if present
     setUnscheduled(prev => prev.filter(u => u.name.toLowerCase() !== activityTitle.trim().toLowerCase()));
 
+    // Persist to API if active trip exists
+    if (activeTrip) {
+      try {
+        setSaving(true);
+        const d = new Date(2024, 9, Number(activityDate)); // October 2024
+        await tripApi.addActivity(String(activeTrip.id), {
+          title: activityTitle.trim(),
+          category: activityCategory,
+          date: d.toISOString(),
+          status: 'planned',
+        });
+      } catch { /* silent: local state already updated */ } finally { setSaving(false); }
+    }
     setActivityTitle('');
     setShowAddModal(false);
   };

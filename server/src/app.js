@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
@@ -6,13 +8,24 @@ const userRoutes = require('./routes/user.route');
 const tripRoutes = require('./routes/trip.route');
 const connectDb = require('./config/db');
 const errorMiddleware = require('./middlewares/error.middleware');
-require('dotenv').config();
 
 const app = express();
 connectDb();
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -23,3 +36,4 @@ app.use('/api/v1/trips', tripRoutes);
 app.use(errorMiddleware);
 
 module.exports = app;
+

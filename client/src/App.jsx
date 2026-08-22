@@ -29,29 +29,27 @@ function PublicOnlyRoute({ children }) {
 
 export default function App() {
   return (
-    <TripProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
 
-          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/explore" element={<Explore />} />
-            <Route path="/my-trips" element={<MyTrips />} />
-            <Route path="/create-trip" element={<CreateTrip />} />
-            <Route path="/activities" element={<Activities />} />
-            <Route path="/itinerary" element={<Itinerary />} />
-            <Route path="/budget" element={<Budget />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/admin" element={<Admin />} />
-          </Route>
+        <Route element={<ProtectedRoute><TripProvider><Layout /></TripProvider></ProtectedRoute>}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/my-trips" element={<MyTrips />} />
+          <Route path="/create-trip" element={<CreateTrip />} />
+          <Route path="/activities" element={<Activities />} />
+          <Route path="/itinerary" element={<Itinerary />} />
+          <Route path="/budget" element={<Budget />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
+        </Route>
 
-          <Route path="*" element={<Navigate to={hasToken() ? '/dashboard' : '/login'} replace />} />
-        </Routes>
-      </BrowserRouter>
-    </TripProvider>
+        <Route path="*" element={<Navigate to={hasToken() ? '/dashboard' : '/login'} replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

@@ -1,7 +1,34 @@
 import { Share2, Copy, MapPin, Calendar, Waves, PersonStanding, Map, List, LayoutGrid } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
-import { communityTrip } from '../../data/mockData';
 import './Community.css';
+
+const communityTrip = {
+  title: 'Blue Domes & Golden Sunsets',
+  location: 'Santorini, Greece',
+  dateRange: 'Aug 12 - Aug 18',
+  creator: { name: 'Alex Rivera', avatar: null },
+  heroQuery: 'santorini greece blue domes sunset',
+  vibe: 'A week of cliffside living, incredible Aegean seafood, and exploring the hidden volcanic beaches of Santorini. This itinerary balances iconic Oia sunsets with quieter moments in Pyrgos and Akrotiri. Perfect for couples or solo travelers seeking slow, aesthetic luxury.',
+  duration: '7 Days',
+  pace: 'Relaxed',
+  days: [
+    {
+      dayNum: 1, title: 'Arrival & Oia Exploration', date: 'Monday, Aug 12',
+      activities: [
+        { id: 1, category: 'LODGING', name: 'Check-in: Canaves Oia Suites', description: 'Settle into the cliffside cave suite. Unpack, enjoy the welcome wine, and take a quick dip in the plunge pool before heading out.', time: '14:00', imageQuery: 'santorini cave hotel suite' },
+        { id: 2, category: 'DINING', name: 'Sunset Dinner at Ammoudi Fish Tavern', description: 'Walk down the 300 steps from Oia to Ammoudi Bay. Reserve a table by the water for fresh catch of the day and spectacular views of the sunset.', time: '18:00', imageQuery: 'ammoudi bay santorini dinner sunset' },
+      ],
+    },
+    {
+      dayNum: 2, title: 'Sailing the Caldera', date: 'Tuesday, Aug 13',
+      activities: [
+        { id: 3, category: 'ACTIVITY', name: 'Semi-Private Catamaran Cruise', description: "A 5-hour sail around the volcano, hot springs, and Red Beach. Includes a full BBQ lunch onboard and snorkeling equipment. Don't forget sunscreen!", time: '10:00 - 15:00', imageQuery: 'catamaran sailing santorini caldera' },
+      ],
+    },
+  ],
+};
+
+
 
 export default function Community() {
   const trip = communityTrip;

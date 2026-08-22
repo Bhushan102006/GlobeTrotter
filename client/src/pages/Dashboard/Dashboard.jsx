@@ -1,19 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, SlidersHorizontal, Filter, ChevronDown, Plus, X, Globe, MapPin, Sparkles, Compass, Check } from 'lucide-react';
 import { PexelsImage } from '../../hooks/usePexels';
-import { topDestinations, previousTrips } from '../../data/mockData';
 import { wikiData } from '../../data/wikiData';
-import { useTrips } from '../../context/TripContext';
+import { tripApi } from '../../services/api';
 import './Dashboard.css';
-
 import { useNavigate } from 'react-router-dom';
+
+const topDestinations = [
+  { id: 1, name: 'Paris', query: 'paris eiffel tower' },
+  { id: 2, name: 'Amalfi Coast', query: 'amalfi coast italy' },
+  { id: 3, name: 'Kyoto', query: 'kyoto japan temple' },
+  { id: 4, name: 'London', query: 'london big ben' },
+  { id: 5, name: 'Dubai', query: 'dubai skyline' },
+];
 
 export default function Dashboard() {
   const [selectedDest, setSelectedDest] = useState(null);
   const [addedTrips, setAddedTrips] = useState({});
+  const [trips, setTrips] = useState([]);
   const navigate = useNavigate();
-  const { trips } = useTrips();
+
+  useEffect(() => {
+    tripApi.list()
+      .then(res => setTrips(Array.isArray(res.response) ? res.response : []))
+      .catch(() => {
+        try {
+          const local = JSON.parse(localStorage.getItem('globetrotter_trips') || '[]');
+          setTrips(local);
+        } catch { setTrips([]); }
+      });
+  }, []);
 
   const handleCardClick = (destName) => {
     const key = destName.toLowerCase();

@@ -12,21 +12,10 @@ const errorMiddleware = require('./middlewares/error.middleware');
 const app = express();
 connectDb();
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : '',
-].filter(Boolean);
-
 app.use(cors({
   origin: (origin, callback) => {
-    const cleanOrigin = origin ? origin.replace(/\/$/, '') : '';
-    if (!origin || allowedOrigins.includes(cleanOrigin)) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS Blocked: Origin "${cleanOrigin}" is not in allowed origins:`, allowedOrigins);
-      callback(new Error(`Not allowed by CORS: Origin "${cleanOrigin}" is not allowed`));
-    }
+    // Dynamically allow any incoming origin to bypass all CORS config issues
+    callback(null, true);
   },
   credentials: true,
 }));
